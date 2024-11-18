@@ -7,10 +7,12 @@ import './services/api/axiosConfig';
 import { Dashboard } from './pages/Dashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import SprintManagement from './pages/SprintManagement';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import { Box, CircularProgress } from '@mui/material';
 import ProtectedRoute from './components/ProtectedRoute';
+import Layout from './components/Layout';
 
 const LoadingSpinner = () => (
   <Box
@@ -55,15 +57,18 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/dashboard/*"
+        path="/"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <Layout />
           </ProtectedRoute>
         }
-      />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      >
+        <Route path="dashboard/*" element={<Dashboard />} />
+        <Route path="sprint-management" element={<SprintManagement />} />
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Route>
     </Routes>
   );
 };
