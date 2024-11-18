@@ -4,18 +4,22 @@ import { AIToolUsage, AIToolUsageSummary, ProjectStats } from '../types/aiToolUs
 const API_URL = '/api/AIToolUsage';
 
 const handleApiError = (error: any) => {
-    console.error('API Error:', error);
-    if (error.response?.data) {
-        throw new Error(error.response.data);
+    console.error('AIToolUsageService Error:', error);
+    if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+    } else if (error.response?.data) {
+        throw new Error(typeof error.response.data === 'string' ? error.response.data : 'Server error');
+    } else if (error.message) {
+        throw new Error(error.message);
     }
-    throw new Error('An error occurred while processing your request');
+    throw new Error('An unexpected error occurred while processing your request');
 };
 
 export const aiToolUsageService = {
     async getUsageData(): Promise<AIToolUsage[]> {
         try {
             console.log('Fetching usage data...');
-            const response = await axiosInstance.get<AIToolUsage[]>(API_URL);
+            const response = await axiosInstance.get<AIToolUsage[]>(`${API_URL}/usage`);
             console.log('Usage data response:', response.data);
             return response.data;
         } catch (error) {
@@ -48,8 +52,8 @@ export const aiToolUsageService = {
     async addUsageData(usageData: AIToolUsage): Promise<AIToolUsage> {
         try {
             console.log('Adding usage data:', usageData);
-            const response = await axiosInstance.post<AIToolUsage>(API_URL, usageData);
-            console.log('Add usage response:', response.data);
+            const response = await axiosInstance.post<AIToolUsage>(`${API_URL}/usage`, usageData);
+            console.log('Add usage data response:', response.data);
             return response.data;
         } catch (error) {
             throw handleApiError(error);

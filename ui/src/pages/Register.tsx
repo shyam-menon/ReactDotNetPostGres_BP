@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Container, TextField, Typography, Alert } from '@mui/material';
+import { Box, Button, Container, TextField, Typography, Alert, CircularProgress } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 import { RegisterRequest } from '../types/auth';
 
@@ -10,7 +10,8 @@ const Register: React.FC = () => {
     const [formData, setFormData] = useState<RegisterRequest>({
         username: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        email: '' // Add this property
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,6 +72,17 @@ const Register: React.FC = () => {
                         margin="normal"
                         required
                         fullWidth
+                        id="email"
+                        label="Email"
+                        name="email"
+                        autoComplete="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                    />
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
                         name="password"
                         label="Password"
                         type="password"
@@ -104,7 +116,7 @@ const Register: React.FC = () => {
                         sx={{ mt: 3, mb: 2 }}
                         disabled={isLoading}
                     >
-                        {isLoading ? 'Signing up...' : 'Sign Up'}
+                        {isLoading ? <CircularProgress size={24} /> : 'Sign Up'}
                     </Button>
                     <Button
                         fullWidth

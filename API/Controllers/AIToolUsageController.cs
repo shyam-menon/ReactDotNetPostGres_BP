@@ -25,19 +25,18 @@ namespace API.Controllers
             _logger = logger;
         }
 
-        private int GetUserId()
+        private Guid GetUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             _logger.LogInformation($"Claims: {string.Join(", ", User.Claims.Select(c => $"{c.Type}: {c.Value}"))}");
-            
-            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userIdGuid))
             {
                 _logger.LogWarning("User ID not found in token or invalid format");
                 throw new UnauthorizedAccessException("User ID not found in token");
             }
-            
-            _logger.LogInformation($"Retrieved user ID: {userId}");
-            return userId;
+
+            return userIdGuid;
         }
 
         [HttpGet]

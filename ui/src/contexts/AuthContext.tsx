@@ -1,84 +1,70 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, LoginRequest, RegisterRequest } from '../types/auth';
+import React, { createContext, useState, useCallback } from 'react';
+import { User, LoginCredentials } from '../types/user';
 import { authService } from '../services/api/authService';
 
 interface AuthContextType {
-    user: User | null;
-    login: (credentials: LoginRequest) => Promise<void>;
-    register: (userData: RegisterRequest) => Promise<void>;
-    logout: () => void;
-    isLoading: boolean;
-    error: string | null;
-    isAuthenticated: boolean;
+  user: User | null;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  logout: () => void;
+  isAuthenticated: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  login: async () => {},
+  logout: () => {},
+  isAuthenticated: false
+});
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(() => {
-        const currentUser = authService.getCurrentUser();
-        return currentUser?.user || null;
-    });
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const storedUser = localStorage.getItem('user');
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
 
-    useEffect(() => {
-        const currentUser = authService.getCurrentUser();
-        if (currentUser) {
-            setUser(currentUser.user);
-        }
-        setIsLoading(false);
-    }, []);
+  const login = useCallback(async (credentials: LoginCredentials) => {
+    try {
+      const response = await authService.login(credentials);
+      const userData: User = {
+        userId: response.user.userId,
+        username: response.user.username,
+        role: response.user.role,
+        token: response.token
+      };
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  }, []);
 
-    const login = async (credentials: LoginRequest) => {
-        try {
-            const response = await authService.login(credentials);
-            setUser(response.user);
-            setError(null);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Login failed');
-            throw err;
-        }
-    };
+  const logout = useCallback(() => {
+    setUser(null);
+    localStorage.removeItem('user');
+    authService.logout();
+  }, []);
 
-    const register = async (userData: RegisterRequest) => {
-        try {
-            const newUser = await authService.register(userData);
-            setUser(newUser);
-            setError(null);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Registration failed');
-            throw err;
-        }
-    };
+  const value = {
+    user,
+    login,
+    logout,
+    isAuthenticated: !!user
+  };
 
-    const logout = () => {
-        authService.logout();
-        setUser(null);
-        setError(null);
-    };
-
-    const isAuthenticated = Boolean(user && authService.getToken());
-
-    const value = {
-        user,
-        login,
-        register,
-        logout,
-        isLoading,
-        error,
-        isAuthenticated
-    };
-
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return context;
+  const context = React.useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
 
-export default AuthContext;
+export default AuthProvider;

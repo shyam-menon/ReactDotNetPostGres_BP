@@ -1,36 +1,44 @@
 import axiosInstance from './axiosConfig';
-import { User, LoginRequest, LoginResponse, RegisterRequest } from '../../types/auth';
+import { LoginRequest, LoginResponse, RegisterRequest, User } from '../../types/auth';
 
 const API_URL = '/api/auth';
 
 class AuthService {
     async login(credentials: LoginRequest): Promise<LoginResponse> {
         try {
-            console.log('Attempting login with:', credentials.username);
+            console.log('AuthService: Attempting login with:', credentials.username);
             const response = await axiosInstance.post<LoginResponse>(`${API_URL}/login`, credentials);
-            console.log('Login response:', response.data);
+            console.log('AuthService: Login response received');
             
-            if (response.data.token) {
-                localStorage.setItem('user', JSON.stringify(response.data));
-                // Set default authorization header
-                axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+            if (response.data && response.data.token) {
+                const userData = {
+                    ...response.data.user,
+                    token: response.data.token
+                };
+                
+                // Store user data in localStorage
+                localStorage.setItem('user', JSON.stringify(userData));
+                console.log('AuthService: User data stored in localStorage');
+                
+                return response.data;
             }
-            return response.data;
+            
+            throw new Error('Login failed: Invalid response format');
         } catch (error) {
-            console.error('Login error:', error);
-            if (error instanceof Error) {
-                throw new Error(`Login failed: ${error.message}`);
-            }
-            throw new Error('Login failed');
+            console.error('AuthService: Login error:', error);
+            this.logout();
+            throw error;
         }
     }
 
     async register(userData: RegisterRequest): Promise<User> {
         try {
+            console.log('AuthService: Attempting registration');
             const response = await axiosInstance.post<User>(`${API_URL}/register`, userData);
+            console.log('AuthService: Registration successful');
             return response.data;
         } catch (error) {
-            console.error('Registration error:', error);
+            console.error('AuthService: Registration error:', error);
             if (error instanceof Error) {
                 throw new Error(`Registration failed: ${error.message}`);
             }
@@ -39,6 +47,7 @@ class AuthService {
     }
 
     logout(): void {
+        console.log('AuthService: Logging out');
         localStorage.removeItem('user');
         delete axiosInstance.defaults.headers.common['Authorization'];
     }
@@ -46,64 +55,13 @@ class AuthService {
     getCurrentUser(): LoginResponse | null {
         try {
             const userStr = localStorage.getItem('user');
-            if (userStr) {
-                const user = JSON.parse(userStr);
-                // Verify token exists
-                if (!user.token) {
-                    this.logout();
-                    return null;
-                }
-                return user;
+            if (!userStr) {
+                console.log('AuthService: No user found in storage');
+                return null;
             }
-            return null;
+            return JSON.parse(userStr);
         } catch (error) {
-            console.error('Error getting current user:', error);
-            this.logout();
-            return null;
-        }
-    }
-
-    getToken(): string | null {
-        const user = this.getCurrentUser();
-        if (user?.token) {
-            // Set default authorization header
-            axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${user.token}`;
-            return user.token;
-        }
-        return null;
-    }
-
-    isAuthenticated(): boolean {
-        const token = this.getToken();
-        if (!token) return false;
-
-        try {
-            // Check if token is expired
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            const expiry = payload.exp * 1000; // Convert to milliseconds
-            if (Date.now() >= expiry) {
-                this.logout();
-                return false;
-            }
-            return true;
-        } catch (error) {
-            console.error('Error checking token:', error);
-            this.logout();
-            return false;
-        }
-    }
-
-    async getCurrentUserInfo(): Promise<User | null> {
-        try {
-            const token = this.getToken();
-            if (!token) return null;
-
-            const response = await axiosInstance.get<User>(`${API_URL}/current`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            return response.data;
-        } catch (error) {
-            this.logout();
+            console.error('AuthService: Error getting current user:', error);
             return null;
         }
     }
