@@ -1,18 +1,24 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Box, Button, Container, TextField, Typography, Alert, CircularProgress } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 import { RegisterRequest } from '../types/auth';
 
 const Register: React.FC = () => {
     const navigate = useNavigate();
-    const { register, error, isLoading } = useAuth();
+    const { register, error, isLoading, isAuthenticated } = useAuth();
     const [formData, setFormData] = useState<RegisterRequest>({
         username: '',
         password: '',
         confirmPassword: '',
-        email: '' // Add this property
+        email: ''
     });
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate('/');
+        }
+    }, [isAuthenticated, navigate]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -25,14 +31,12 @@ const Register: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (formData.password !== formData.confirmPassword) {
-            // Handle password mismatch
             return;
         }
         try {
             await register(formData);
             navigate('/login');
         } catch (err) {
-            // Error is handled by useAuth hook
             console.error('Registration failed:', err);
         }
     };
